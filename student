@@ -1,0 +1,83 @@
+```{r}
+directorio<-"/Users/pitec/Desktop/Estudio/experto big data/isabel/entrega 1/student"
+setwd(directorio)
+```
+
+```{r}
+studentmat<-read.table("/Users/pitec/Desktop/Estudio/experto big data/isabel/entrega 1/student/student-mat.csv",row.names=NULL, sep=";",header=TRUE)
+studentpor<-read.table("/Users/pitec/Desktop/Estudio/experto big data/isabel/entrega 1/student/student-por.csv",row.names=NULL, sep=";",header=TRUE)
+```
+
+```{r}
+# Como tenemos archivos de dos asignaturas distintas, es probable que alumnos que hagan matemáticas, también estudien portugüés, por lo que debemos comparar algunos atributos de ambas materias para verificarlo. Para ello necesitamos comparar varios campos, cuantos más mejor, ya que si muchos atributos coinciden no puede ser otra que ambas personas sean el mismo estudiante. Para esto usamo:
+
+studentmp<- merge(studentmat,studentpor,by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"), all=FALSE, suffixes=c("mat","por"))
+dim(studentmp)[1]
+
+#Si quitamos algún campo, el número aumenta, y eso implica que el dato que hemos quitado es muy relevante para ello.
+```
+
+```{r}
+#Podemos ordenar cualquier data.frame de orden creciente o decreciente cualquier atributo, y además agruparlos según queramos con otro atributo. Para el studentMat y studentPor ordenaremos Fjob de mayor a menor (-xtfrm) y los agruparemos por edades:
+
+studentmat <- studentmat[order(studentmat[,3],-xtfrm(studentmat[ ,10])), ]
+studentpor <- studentpor[order(studentpor[,3],-xtfrm(studentpor[ ,10])), ]
+```
+
+```{r}
+#Para ver mejor el estado final del alumno, si ha aprobado o no la asignatura, calculamos la media de sus notas y añadimos una columna nueva:
+
+#ESTUDIA MATEMATICAS
+studentmat$media <- rowMeans(studentmat[ ,31:33])
+
+#Colocamos una columna nueva exponiendo si ha aprobado o no:
+studentmat$estado <- ifelse (studentmat$media < 10, "suspenso", "aprobado")
+View(studentmat)
+
+#ESTUDIA PORTUGUES
+studentpor$media <- rowMeans(studentpor[ ,31:33])
+
+#Colocamos una columna nueva exponiendo si ha aprobado o no:
+studentpor$estado <- ifelse (studentpor$media < 10, "suspenso", "aprobado")
+View(studentpor)
+
+#ESTUDIA LAS DOS ASIGNATURAS
+studentmp$mediaM <- rowMeans(studentmp[ ,31:33])
+
+#Colocamos una columna nueva exponiendo si ha aprobado o no matematicas:
+studentmp$estadoM <- ifelse (studentmp$mediaM < 10, "suspenso", "aprobado")
+studentmp$mediaP <- rowMeans(studentmp[ ,51:53])
+
+#Colocamos una columna nueva exponiendo si ha aprobado o no portugues:
+studentmp$estadoP <- ifelse (studentmp$mediaP < 10, "suspenso", "aprobado")
+View(studentmp)
+
+#Una vez hecho esto, podemos usar el paso anterior para odernarlos en funcion de la media y ver quien tiene mejor media y quien no. A raiz de esto, podemos analizar cuantos de los que estan suspensos tiene padres separados o que grado de relación tiene con su pareja, para analizar si eso ha podido influir en sus notas.
+
+```
+
+```{r}
+#Podemos agrupar cuantos alumnos han aprobado o suspendido en función de las características, ya sea sexo, relación romantica o lo que queramos.
+ library(dplyr)
+ grupoM<- group_by(studentmat, sex, estado)
+ summarise(grupoM, num=n())
+ 
+ ## ESTUDIO DE LOS ALUMNOS QUE CURSAN LAS DOS ASIGNATURAS ## 
+ 
+# Es interesante hacer este análisis para los alumnos que cursan las dos asignaturas
+ grupomp<- group_by(studentmp, sex, estadoP, estadoM)
+ summarise(grupomp, num=n())
+ #Esto nos saca una tabla con las combinaciones entre el estado en portugüés y matemáticas con el tipo de sexo. Podemos cambiar las variables para buscar datos importantes.
+ #Se puede observar que hay mayor número de suspensos en matemáticas que en portugüés y además, en los hombres el número de aprobados en matemáticas(130 de 184) es, en proporción, mucho mayor que en las mujeres (99 de 198)
+ 
+ #Podemos calcular la media en general por sexos para cada curso de studentmp:
+grupompS<- group_by(studentmp, sex)
+summarise(grupompS, mediaP = mean(mediaP, na.rm =TRUE), mediaM = mean(mediaM, na.rm = TRUE))
+
+# Es importante ver que aunque la proporción de mujeres es mayor que la de hombres, hay más proporción de aprobados en hombres que en mujeres en la asignatura de matemáticas. Esto es contrario en la asigantura de portugüés, hay más mujeres aprobando portugüés que hombres. Además, si miramos la nota media, la de hombres es mayor que la de mujeres. Si tenemos en cuenta que la asignatura de matemáticas es una asignatura de ciencias, mientras que la de portugüés no, los resultados se pueden deber a que la asignatura de matematicas, en general, guste más, o sea más sencilla para hombres que para mujeres, y por ello aprueben más. Para llegar más a fondo en este argumento, influye el tiempo de estudio en cada asignatura, por ello sacamos la media de tiempo de estudio por sexo y por asignatura:
+
+grupomptime<- group_by(studentmp, sex)
+summarise(grupomptime, tiempoP = mean(studytimepor, na.rm =TRUE), tiempoM = mean(studytimemat, na.rm = TRUE))
+
+#Podemos observar que el tiempo de estudio en hombres de media, es inferior al de mujeres en ambas asignaturas, por lo que si estudiando menos tiempo matemáticas hay más hombres aprobados y más media en esa asignatura, es probable que se deba a que las matemáticas gustan más, o son más simples de estudiar para los hombres que para las mujeres. Aun así, se puede seguir comparando valores para buscar otro argumento posible, ya sea relación amorosa, estado de los padres, etc..
+```
